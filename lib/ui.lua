@@ -4,14 +4,14 @@ Adore.ui = {}
 Adore.ui.anchors = {}
 Adore.ui.objects = {}
 Adore.ui.types = {}
+Adore.ui.fonts = {}
+
+Adore.ui.uiScale = 4
 
 function ui:load()
     screenX = love.graphics.getWidth()
     screenY = love.graphics.getHeight()
 
-    Adore.ui:registerUiType(love.graphics.newQuad(0,0,32,32,32,32),Adore:findSprite("breadpanel.png"), "test")
-    Adore.ui:registerUiType(love.graphics.newQuad(0,0,59,16,59,16),Adore:findSprite("breadpanel2.png"), "test2")
-    
     Adore.ui.anchors = {
         m = Vector2(screenX / 2, screenY / 2),
         tl = Vector2(0, 0),
@@ -23,11 +23,6 @@ function ui:load()
         bl = Vector2(0, screenY),
         l = Vector2(0, screenY / 2)
     }
-
-    Adore.ui:addButton("testPanel", "tl", Vector2(0,0), Adore.ui.types.test, 1, "scripts/uiTest")
-
-    Adore.ui:addText("textTest", "tr", Vector2(0,0), Adore.ui.types.test, 2)
-
 end
 
 function ui:update(dt)
@@ -43,7 +38,6 @@ function ui:draw()
         end
 
         local anchor = Adore.ui.anchors[i.anchor]
-        print(anchor.x)
         local offset = i.offset or Vector2(0,0)
         if offset.x == 0 and offset.y == 0 then
             if i.anchor == "m" then
@@ -66,7 +60,13 @@ function ui:draw()
         end
 
         i.anchorOffset = offset
-        love.graphics.draw(i.drawable, anchor.x, anchor.y, 0, 4, 4, offset.x, offset.y)
+        local sx, sy = 4, 4
+        if i.type == "text" then
+            sx, sy = 1, 1
+        end
+
+        love.graphics.draw(i.drawable, anchor.x, anchor.y, 0, sx, sy, offset.x, offset.y)
+
     end
 end
 
@@ -83,6 +83,12 @@ function Adore.ui:addPanel(id, anchor, offset, uiType, layer, scriptPath)
     return p
 end
 
+function Adore.ui:addFont(id, filePath)
+    font = love.graphics.newFont(filePath, 64)
+
+    Adore.ui.fonts[id] = font
+end
+
 function Adore.ui:addButton(id, anchor, offset, uiType, layer, scriptPath)
     b = basicUiPiece(id, anchor, offset, uiType, layer, scriptPath)
     b.type = "button"
@@ -91,11 +97,15 @@ function Adore.ui:addButton(id, anchor, offset, uiType, layer, scriptPath)
     return b
 end
 
-function Adore.ui:addText(id, anchor, offset, uiType, layer, scriptPath)
-    t = basicUiPiece(id, anchor, offset, uiType, layer, scriptPath)
-    t.type = "text"
+function Adore.ui:addText(id, anchor, offset, layer, font)
+    local newType = {
+        quad = love.graphics.newQuad(0,0,0,0,0,0),
+        drawable = love.graphics.newText(font, "")
+    }
 
-    t.drawable = love.graphics.newText(love.graphics.getFont(), "hi, do you really work?")
+
+    t = basicUiPiece(id, anchor, offset, newType, layer, nil)
+    t.type = "text"
     
     return t
 end
@@ -103,7 +113,7 @@ end
 
 function basicUiPiece(id, anchor, offset, uiType, layer, scriptPath)
     local scriptPath = scriptPath or nil
-
+    
     local basic = {
         type = "basic",
         anchor = anchor,
@@ -153,10 +163,10 @@ function ui:hoverDetection()
 
             local anchor = Adore.ui.anchors[i.anchor]
 
-            local right = anchor.x + ((w - i.anchorOffset.x) * 4)
-            local left = anchor.x - ((i.anchorOffset.x) * 4)
-            local bottom = anchor.y + ((h - i.anchorOffset.y) * 4)
-            local top = anchor.y - ((i.anchorOffset.y) * 4)
+            local right = anchor.x + ((w - i.anchorOffset.x) * Adore.ui.uiScale)
+            local left = anchor.x - ((i.anchorOffset.x) * Adore.ui.uiScale)
+            local bottom = anchor.y + ((h - i.anchorOffset.y) * Adore.ui.uiScale)
+            local top = anchor.y - ((i.anchorOffset.y) * Adore.ui.uiScale)
 
             if Mx > left and Mx < right and
                 My < bottom and My > top  then
@@ -174,21 +184,37 @@ function ui:hoverDetection()
     table.sort(hovering, compare)
 end
 
-function love.mousepressed( x, y, button, istouch, presses )
-    if hovering[1] ~= nil then
-        if hovering[1].script.mousePressed ~= nil then
-            hovering[1].script:mousePressed()
+local oldMousePressed = love.mousepressed
+local oldMouseReleased = love.mousereleased
+
+function love.mousepressed(x, y, button, istouch, presses)
+    if oldMousePressed then
+        oldMousePressed(x, y, button, istouch, presses)
+    end
+
+    if hovering[1] ~= nil then 
+        if hovering[1].script ~= nil then
+            if hovering[1].script.mousePressed ~= nil then
+                hovering[1].script:mousePressed() 
+            end
         end
     end
 end
 
-function love.mousereleased( x, y, button, istouch, presses )
+function love.mousereleased(x, y, button, istouch, presses)
+    if oldMouseReleased then
+        oldMouseReleased(x, y, button, istouch, presses)
+    end
+
     if hovering[1] ~= nil then
-        if hovering[1].script.mouseReleased ~= nil then
-            hovering[1].script:mouseReleased()
+        if hovering[1].script ~= nil then
+            if hovering[1].script.mouseReleased ~= nil then
+                hovering[1].script:mouseReleased()
+            end
         end
     end
 end
+
 
 
 return ui

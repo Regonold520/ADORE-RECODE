@@ -46,7 +46,6 @@ end
 
 function object:addTag(tag)
     table.insert(self.tags, tag)
-    print(self.tags)
 end
 
 function object:hasTag(tag)

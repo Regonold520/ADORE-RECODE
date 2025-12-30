@@ -11,18 +11,36 @@ function bred.new(object)
 end
 
 function bred:load()
-    print("im in the scene now:", self.object.id)
 end
 
+local breadCount = 0 --I mean, pretty self explanatory, its the COUNT of BREAD :)
+local changeScale = 0 --The scale modifier when you click on the bread
+
 function bred:update(dt)
-    self.dTimer = self.dTimer + dt
-    local obj = self.object
+    self.dTimer = self.dTimer + dt --Keep constant deltaTimer going so that the sin and cos stuff runs forever
 
-    obj.scale.x = 4 + math.sin(self.dTimer)
-    obj.scale.y = 4 + math.cos(self.dTimer)
+    local obj = self.object --The object this script is attached to
 
-    obj.localPos.x = math.sin(self.dTimer) * 50
-    obj.localPos.y = math.cos(self.dTimer) * 50
+    Adore.ui.objects.breadText.drawable:set("Bread: " .. tostring(breadCount)) --References and then replaces the text of the bread display text
+    
+    --This block of stuff just returns changeScale to 0 if modified
+    if changeScale > 0 then
+        changeScale = changeScale - (dt*8)
+    elseif changeScale < 0 then
+        changeScale = 0
+    end
+
+    --Funny squash and stretch on the bread object
+    obj.scale.x = (6 - changeScale) + math.cos(self.dTimer) / 1.5
+    obj.scale.y = (6 - (changeScale/2)) + math.sin(self.dTimer) / 1.5
+
+end
+
+function bred:mouseReleased()
+    --Im not explaining these, I trust that youre smart enough :)
+    changeScale = 1.5 
+    breadCount = breadCount + 1
+    Adore.camera.rot = Adore.randfRange(-25,25)
 end
 
 return bred

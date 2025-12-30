@@ -26,24 +26,14 @@ function adore:load()
     Adore:registerSprites()
     Adore.lib.ui:load()
 
-    local bred = Adore.lib.object:new(love.graphics.newQuad(0,0,32,32,32,32), "bread1.png",Vector2(love.graphics.getWidth()/2,love.graphics.getHeight()/2), "bred", 0)
-    local bred2 = Adore.lib.object:new(love.graphics.newQuad(0,0,32,32,32,32), "bread2.png",Vector2(100,0), "bred2", 1, "scripts/bred2")
-    local bred3 = Adore.lib.object:new(love.graphics.newQuad(0,0,32,32,32,32), "bread3.png",Vector2(0,100), "bred3", 2, "scripts/bred")
-
-    bred:addChild(bred2)
-    bred2:addChild(bred3)
-
-    bred:setMouseDetectable(true)
-    bred:setMouseDetectable(false)
-
-    print(Adore.mouseDetectors.bred)
-
     Adore:printTree()
 end
 local dTimer = 0
 function adore:update(dt)
     dTimer = dTimer + dt
     Adore.lib.ui:update(dt)
+
+    Adore:hoverDetection()
 
     --Adore.camera.x = math.sin(dTimer) * 40
     --Adore.camera.y = math.cos(dTimer) * 40
@@ -126,6 +116,10 @@ function Adore:getRoots()
     return roots
 end
 
+function Adore.randfRange(min, max)
+    return min + math.random() * (max - min)
+end
+
 function Adore:printNode(node, depth)
     depth = depth or 0
     local indent = string.rep("  ", depth)
@@ -144,31 +138,33 @@ function Adore:printTree()
 end
 
 function Adore:registerSprites()
-    local items = love.filesystem.getDirectoryItems("sprites")
+    Adore.sprites = {}
 
-    
+    local function scanDir(dir)
+        local items = love.filesystem.getDirectoryItems(dir)
 
-    local dirs = {}
+        for _, item in ipairs(items) do
+            local fullPath = dir .. "/" .. item
+            local info = love.filesystem.getInfo(fullPath)
 
-    for _, item in ipairs(items) do
-        local fullPath = "sprites/" .. item
+            if info then
+                if info.type == "directory" then
+                    scanDir(fullPath)
 
-        if love.filesystem.getInfo(fullPath, "directory") then
-            table.insert(dirs, fullPath)
-        end
-    end
-
-    for _, dir in ipairs(dirs) do
-        for i, img in ipairs(love.filesystem.getDirectoryItems(dir)) do
-            if Adore.stringEndsWith(img, ".png") then
-                table.insert(Adore.sprites, {
-                    path = img,
-                    img = love.graphics.newImage(dir .. "/" .. img)
-                })
+                elseif info.type == "file" and Adore.stringEndsWith(item, ".png") then
+                    table.insert(Adore.sprites, {
+                        path = fullPath,         
+                        img  = love.graphics.newImage(fullPath)
+                    })
+                end
             end
         end
     end
+
+    -- start at root sprites folder
+    scanDir("sprites")
 end
+
 
 function Adore.stringEndsWith(str, suffix)
     return string.sub(str, -string.len(suffix)) == suffix
@@ -176,13 +172,102 @@ end
 
 function Adore:findSprite(sprite)
     for _, img in ipairs(Adore.sprites) do
-        if img.path == sprite then
+        if img.path:match(sprite.."$") then
             return img.img
-        elseif _ == #Adore.sprites then
-            return Adore:findSprite("missing.png")
         end
     end
+    for _, img in ipairs(Adore.sprites) do
+        if img.path:match("missing.png$") then
+            return img.img
+        end
+    end
+    return nil
 end
+
+local hovering = {}
+function Adore:hoverDetection()
+    hovering = {}
+    for _,i in pairs(Adore.mouseDetectors) do
+        local sx, sy = love.mouse.getPosition()
+        local Mx, My = Adore:screenToWorld(sx, sy)
+
+        local _, _, w, h = i.quad:getViewport()
+        local hw = (w * i.scale.x) / 2
+        local hh = (h * i.scale.y) / 2
+
+        local left   = i.globalPos.x - hw
+        local right  = i.globalPos.x + hw
+        local top    = i.globalPos.y - hh
+        local bottom = i.globalPos.y + hh
+
+        if Mx > left and Mx < right and My > top and My < bottom then
+            table.insert(hovering, i)
+        end
+
+
+    end
+
+    function compare(a, b)
+        return a.layer > b.layer
+    end
+
+    table.sort(hovering, compare)
+end
+
+function Adore:screenToWorld(sx, sy)
+    local x, y = sx, sy
+
+    x = x - love.graphics.getWidth() / 2
+    y = y - love.graphics.getHeight() / 2
+
+    local r = -math.rad(Adore.camera.rot)
+    local cosr = math.cos(r)
+    local sinr = math.sin(r)
+    x, y = x * cosr - y * sinr, x * sinr + y * cosr
+
+    x = x / Adore.camera.zoom
+    y = y / Adore.camera.zoom
+
+    x = x + Adore.camera.x + love.graphics.getWidth() / 2
+    y = y + Adore.camera.y + love.graphics.getHeight() / 2
+
+    return x, y
+end
+
+
+local oldMousePressed = love.mousepressed
+local oldMouseReleased = love.mousereleased
+
+function love.mousepressed(x, y, button, istouch, presses)
+    if oldMousePressed then
+        oldMousePressed(x, y, button, istouch, presses)
+    end
+
+    if hovering[1] ~= nil then 
+        if hovering[1].script ~= nil then
+            if hovering[1].script.mousePressed ~= nil then
+                hovering[1].script:mousePressed() 
+            end 
+        end
+    end
+    
+end
+
+function love.mousereleased(x, y, button, istouch, presses)
+    if oldMouseReleased then
+        oldMouseReleased(x, y, button, istouch, presses)
+    end
+
+    if hovering[1] ~= nil then 
+        if hovering[1].script ~= nil then
+            if hovering[1].script.mouseReleased ~= nil then
+                hovering[1].script:mouseReleased() 
+            end 
+        end
+    end
+
+end
+
 
 local screenDim = Vector2(800, 600)
 local oldResize = love.resize
