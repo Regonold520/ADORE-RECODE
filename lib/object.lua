@@ -58,6 +58,15 @@ function object:hasTag(tag)
     return false
 end
 
+function object:setMouseDetectable(state)
+    if state == true then
+        Adore.mouseDetectors[self.id] = self
+    else
+        Adore.mouseDetectors[self.id] = nil
+    end
+end
+
+
 function object:addChild(obj)
     table.insert(self.children, obj)
     obj.parent = self

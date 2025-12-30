@@ -7,6 +7,7 @@ Adore.searchPath = "sprites"
 Adore.sprites = {}
 Adore.drawables = {}
 Adore.updateables = {}
+Adore.mouseDetectors = {}
 Adore.needsSort = true
 
 Adore.lib.ui = require("lib/ui")
@@ -32,6 +33,11 @@ function adore:load()
     bred:addChild(bred2)
     bred2:addChild(bred3)
 
+    bred:setMouseDetectable(true)
+    bred:setMouseDetectable(false)
+
+    print(Adore.mouseDetectors.bred)
+
     Adore:printTree()
 end
 local dTimer = 0
@@ -39,11 +45,10 @@ function adore:update(dt)
     dTimer = dTimer + dt
     Adore.lib.ui:update(dt)
 
-    Adore.camera.x = math.sin(dTimer) * 40
-    Adore.camera.y = math.cos(dTimer) * 40
-    Adore.camera.zoom = 1 + math.sin(dTimer) / 10
-    Adore.camera.rot = Adore.camera.rot + dt * 5
-
+    --Adore.camera.x = math.sin(dTimer) * 40
+    --Adore.camera.y = math.cos(dTimer) * 40
+    --Adore.camera.zoom = 1 + math.sin(dTimer) / 10
+    --Adore.camera.rot = Adore.camera.rot + dt * 5
     for _,i in ipairs(Adore.updateables) do
         if i.script.update ~= nil then
             i.script:update(dt)
@@ -177,6 +182,34 @@ function Adore:findSprite(sprite)
             return Adore:findSprite("missing.png")
         end
     end
+end
+
+local screenDim = Vector2(800, 600)
+local oldResize = love.resize
+love.resize = function(screenX, screenY)
+    
+    Adore.ui.anchors = {
+        m = Vector2(screenX / 2, screenY / 2),
+        tl = Vector2(0, 0),
+        t = Vector2(screenX / 2, 0),
+        tr = Vector2(screenX, 0),
+        r = Vector2(screenX, screenY / 2),
+        br = Vector2(screenX, screenY),
+        b = Vector2(screenX / 2, screenY),
+        bl = Vector2(0, screenY),
+        l = Vector2(0, screenY / 2)
+    }
+
+    if screenDim ~= nil then
+        local diff = Vector2(screenX - screenDim.x, screenY - screenDim.y)
+
+        Adore.camera.x = Adore.camera.x - diff.x / 2
+        Adore.camera.y = Adore.camera.y - diff.y / 2
+
+        screenDim = Vector2(screenX, screenY)
+    end
+    
+    if oldResize then oldResize(w, h) end
 end
 
 return adore
