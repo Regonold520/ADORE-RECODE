@@ -4,8 +4,11 @@
 local adore = require("lib/adore")
 
 function love.load()
-    love.graphics.setDefaultFilter("nearest", "nearest")
+    --Ill make both of these next lines configurable in the library in the near future with nice functions, prolly with a nice hex converter cus this is... ugly
+    love.graphics.setDefaultFilter("nearest", "nearest") 
     love.graphics.setBackgroundColor(0.7254901960784313, 0.4666666666666667, 0.23529411764705882)
+
+
     adore:load()
 
 
